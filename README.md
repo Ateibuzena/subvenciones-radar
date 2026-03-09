@@ -49,7 +49,7 @@ No requiere librerías externas. Solo Python 3.10+.
 
 ```bash
 # Clonar el repositorio
-git clone https://github.com/tu-usuario/subvenciones-radar.git
+git clone https://github.com/Ateibuzena/subvenciones-radar.git
 cd subvenciones-radar
 
 # Probar con datos de demo (sin conexión a internet)
