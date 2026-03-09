@@ -2,7 +2,7 @@
 
 > Vigilancia automática de ayudas y subvenciones públicas para empresas en España.  
 > Rastrea el BOE, la BDNS y 5 boletines autonómicos cada día y lo presenta en un dashboard visual.
-
+![Demo del dashboard](monitor-subvenciones.gif)
 ---
 
 ## ¿Qué problema resuelve?
