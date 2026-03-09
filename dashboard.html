@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Monitor de Subvenciones · Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;500&family=Nunito+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#0a0f1a;
+    --surface:#111827;
+    --surface2:#1a2336;
+    --border:#1f2d45;
+    --accent:#00e5ff;
+    --accent2:#7c3aed;
+    --accent3:#10b981;
+    --warn:#f59e0b;
+    --danger:#ef4444;
+    --text:#e2e8f0;
+    --muted:#64748b;
+    --boe:#3b82f6;
+    --bdns:#8b5cf6;
+    --boja:#f59e0b;
+    --dogc:#ef4444;
+    --bocm:#ec4899;
+    --dogv:#06b6d4;
+    --bopv:#10b981;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--text);font-family:'Nunito Sans',sans-serif;font-size:14px;min-height:100vh;overflow-x:hidden}
+  
+  /* HEADER */
+  header{
+    background:linear-gradient(135deg,#0a0f1a 0%,#111827 50%,#0d1b2e 100%);
+    border-bottom:1px solid var(--border);
+    padding:0 24px;
+    display:flex;align-items:center;justify-content:space-between;
+    height:64px;position:sticky;top:0;z-index:100;
+    backdrop-filter:blur(12px);
+  }
+  .logo{display:flex;align-items:center;gap:12px}
+  .logo-icon{width:36px;height:36px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px}
+  .logo-text{font-family:'Syne',sans-serif;font-weight:800;font-size:16px;letter-spacing:-0.5px}
+  .logo-text span{color:var(--accent)}
+  .header-meta{display:flex;align-items:center;gap:16px}
+  .live-badge{display:flex;align-items:center;gap:6px;padding:4px 12px;border:1px solid var(--accent3);border-radius:20px;color:var(--accent3);font-size:11px;font-family:'IBM Plex Mono',monospace}
+  .live-dot{width:6px;height:6px;background:var(--accent3);border-radius:50%;animation:pulse 2s infinite}
+  @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.3)}}
+  .header-date{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted)}
+  
+  /* LAYOUT */
+  .container{max-width:1400px;margin:0 auto;padding:24px}
+  
+  /* STATS TOP */
+  .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+  .stat-card{
+    background:var(--surface);border:1px solid var(--border);border-radius:12px;
+    padding:20px;position:relative;overflow:hidden;
+    transition:border-color .2s,transform .2s;cursor:default;
+  }
+  .stat-card:hover{border-color:var(--accent);transform:translateY(-2px)}
+  .stat-card::before{content:'';position:absolute;top:0;right:0;width:80px;height:80px;opacity:.05;border-radius:50%;transform:translate(20px,-20px)}
+  .stat-card:nth-child(1)::before{background:var(--accent)}
+  .stat-card:nth-child(2)::before{background:var(--accent3)}
+  .stat-card:nth-child(3)::before{background:var(--warn)}
+  .stat-card:nth-child(4)::before{background:var(--accent2)}
+  .stat-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-family:'IBM Plex Mono',monospace;margin-bottom:8px}
+  .stat-value{font-family:'Syne',sans-serif;font-size:32px;font-weight:800;line-height:1}
+  .stat-value.cyan{color:var(--accent)}
+  .stat-value.green{color:var(--accent3)}
+  .stat-value.amber{color:var(--warn)}
+  .stat-value.purple{color:var(--accent2)}
+  .stat-sub{font-size:11px;color:var(--muted);margin-top:6px}
+  
+  /* MAIN GRID */
+  .main-grid{display:grid;grid-template-columns:1fr 380px;gap:16px;align-items:start}
+  
+  /* PANEL */
+  .panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+  .panel-header{
+    padding:16px 20px;border-bottom:1px solid var(--border);
+    display:flex;align-items:center;justify-content:space-between;
+  }
+  .panel-title{font-family:'Syne',sans-serif;font-weight:700;font-size:14px;display:flex;align-items:center;gap:8px}
+  .panel-title .icon{opacity:.7}
+  .panel-body{padding:20px}
+  
+  /* FILTERS */
+  .filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+  .filter-input{
+    background:var(--surface2);border:1px solid var(--border);color:var(--text);
+    padding:8px 12px;border-radius:8px;font-family:'Nunito Sans',sans-serif;font-size:13px;
+    outline:none;transition:border-color .2s;
+  }
+  .filter-input:focus{border-color:var(--accent)}
+  .filter-input::placeholder{color:var(--muted)}
+  #search-input{flex:1;min-width:200px}
+  select.filter-input{cursor:pointer;min-width:130px}
+  
+  /* TAGS boletín */
+  .tag{
+    display:inline-block;padding:2px 8px;border-radius:4px;
+    font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;
+    letter-spacing:.5px;
+  }
+  .tag-boe{background:rgba(59,130,246,.15);color:#60a5fa;border:1px solid rgba(59,130,246,.3)}
+  .tag-bdns{background:rgba(139,92,246,.15);color:#a78bfa;border:1px solid rgba(139,92,246,.3)}
+  .tag-boja{background:rgba(245,158,11,.15);color:#fbbf24;border:1px solid rgba(245,158,11,.3)}
+  .tag-dogc{background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.3)}
+  .tag-bocm{background:rgba(236,72,153,.15);color:#f472b6;border:1px solid rgba(236,72,153,.3)}
+  .tag-dogv{background:rgba(6,182,212,.15);color:#22d3ee;border:1px solid rgba(6,182,212,.3)}
+  .tag-bopv{background:rgba(16,185,129,.15);color:#34d399;border:1px solid rgba(16,185,129,.3)}
+  
+  /* RELEVANCE BAR */
+  .relevance{display:flex;align-items:center;gap:6px}
+  .rel-bar{height:3px;border-radius:2px;background:var(--border);flex:1;max-width:60px}
+  .rel-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--accent3),var(--accent))}
+  .rel-label{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted)}
+  
+  /* CONVOCATORIA LIST */
+  .conv-list{max-height:620px;overflow-y:auto;padding-right:4px}
+  .conv-list::-webkit-scrollbar{width:4px}
+  .conv-list::-webkit-scrollbar-track{background:transparent}
+  .conv-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+  
+  .conv-item{
+    padding:14px 16px;border:1px solid var(--border);border-radius:10px;
+    margin-bottom:8px;cursor:pointer;transition:all .15s;
+    background:var(--surface2);
+  }
+  .conv-item:hover{border-color:var(--accent);background:#1a2a3e}
+  .conv-item.selected{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent),0 4px 16px rgba(0,229,255,.1)}
+  .conv-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px}
+  .conv-title{font-weight:600;font-size:13px;line-height:1.4;flex:1}
+  .conv-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .conv-date{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted)}
+  .conv-org{font-size:11px;color:var(--muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:220px}
+  .conv-importe{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--accent3)}
+  
+  /* DETAIL PANEL */
+  .detail-panel{position:sticky;top:80px}
+  .detail-body{padding:20px}
+  .detail-empty{text-align:center;padding:60px 20px;color:var(--muted)}
+  .detail-empty .big-icon{font-size:40px;margin-bottom:12px;opacity:.3}
+  .detail-boletin-banner{
+    padding:10px 20px;
+    font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:1px;
+    font-weight:500;
+    display:flex;align-items:center;justify-content:space-between;
+  }
+  .detail-title{font-family:'Syne',sans-serif;font-weight:700;font-size:16px;line-height:1.4;margin-bottom:12px}
+  .detail-organismo{font-size:12px;color:var(--muted);margin-bottom:16px;display:flex;align-items:center;gap:6px}
+  .detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
+  .detail-field{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px}
+  .detail-field-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;font-family:'IBM Plex Mono',monospace;margin-bottom:4px}
+  .detail-field-value{font-size:12px;font-weight:600}
+  .detail-desc{font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:16px;padding:12px;background:var(--surface2);border-radius:8px;border:1px solid var(--border)}
+  .chip-list{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:16px}
+  .chip{padding:3px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;font-size:11px;color:var(--muted)}
+  .btn-primary{
+    display:inline-flex;align-items:center;gap:6px;
+    background:linear-gradient(135deg,var(--accent),#0099cc);color:#000;
+    padding:10px 20px;border-radius:8px;font-weight:700;font-size:13px;
+    text-decoration:none;border:none;cursor:pointer;width:100%;justify-content:center;
+    transition:opacity .2s,transform .2s;
+  }
+  .btn-primary:hover{opacity:.9;transform:translateY(-1px)}
+  
+  /* CHARTS ROW */
+  .charts-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-top:16px}
+  .chart-panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px}
+  .chart-title{font-family:'Syne',sans-serif;font-weight:700;font-size:13px;margin-bottom:16px;color:var(--text)}
+  canvas{max-height:200px}
+  
+  /* BOLETINES SIDEBAR */
+  .boletines-list{display:flex;flex-direction:column;gap:6px}
+  .boletin-row{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface2);border-radius:8px;border:1px solid var(--border)}
+  .boletin-name{display:flex;align-items:center;gap:8px;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:500}
+  .boletin-dot{width:8px;height:8px;border-radius:50%}
+  .boletin-count{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);background:var(--surface);padding:2px 8px;border-radius:4px}
+  .boletin-status{font-size:10px;color:var(--accent3)}
+  
+  /* EMPTY STATE */
+  .empty-list{text-align:center;padding:40px;color:var(--muted);font-size:13px}
+  
+  /* COUNT BADGE */
+  .count-badge{background:var(--accent2);color:white;padding:2px 8px;border-radius:10px;font-size:10px;font-family:'IBM Plex Mono',monospace}
+  
+  /* SECTION LABEL */
+  .section-label{font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+  .section-label::after{content:'';flex:1;height:1px;background:var(--border)}
+
+  @media(max-width:1100px){
+    .main-grid{grid-template-columns:1fr}
+    .detail-panel{position:static}
+    .stats-grid{grid-template-columns:repeat(2,1fr)}
+    .charts-row{grid-template-columns:1fr 1fr}
+  }
+  @media(max-width:640px){
+    .stats-grid{grid-template-columns:1fr}
+    .charts-row{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">📋</div>
+    <div>
+      <div class="logo-text">Monitor <span>Subvenciones</span></div>
+      <div style="font-size:10px;color:var(--muted);font-family:'IBM Plex Mono',monospace">BOE · BDNS · Boletines Autonómicos</div>
+    </div>
+  </div>
+  <div class="header-meta">
+    <div class="live-badge"><div class="live-dot"></div>DEMO MODE</div>
+    <div class="header-date" id="current-date"></div>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- STATS -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-label">Total convocatorias</div>
+      <div class="stat-value cyan" id="stat-total">—</div>
+      <div class="stat-sub">en base de datos</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Abiertas / relevantes</div>
+      <div class="stat-value green" id="stat-open">—</div>
+      <div class="stat-sub">relevancia ≥ 50%</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Fuentes activas</div>
+      <div class="stat-value amber">7</div>
+      <div class="stat-sub">BOE · BDNS · 5 autonómicos</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Última actualización</div>
+      <div class="stat-value purple" style="font-size:18px" id="stat-updated">—</div>
+      <div class="stat-sub">ejecución del scraper</div>
+    </div>
+  </div>
+
+  <!-- MAIN GRID -->
+  <div class="main-grid">
+
+    <!-- LEFT: list + filters -->
+    <div>
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title"><span class="icon">🔍</span> Convocatorias <span class="count-badge" id="list-count">0</span></div>
+        </div>
+        <div class="panel-body">
+          <div class="filters">
+            <input type="text" class="filter-input" id="search-input" placeholder="Buscar por título, organismo…">
+            <select class="filter-input" id="filter-boletin">
+              <option value="">Todos los boletines</option>
+              <option value="BOE">BOE</option>
+              <option value="BDNS">BDNS</option>
+              <option value="BOJA">BOJA</option>
+              <option value="DOGC">DOGC</option>
+              <option value="BOCM">BOCM</option>
+              <option value="DOGV">DOGV</option>
+              <option value="BOPV">BOPV</option>
+            </select>
+            <select class="filter-input" id="filter-comunidad">
+              <option value="">Todas las CC.AA.</option>
+              <option value="Nacional">Nacional</option>
+              <option value="Andalucía">Andalucía</option>
+              <option value="Cataluña">Cataluña</option>
+              <option value="Madrid">Madrid</option>
+              <option value="Comunitat Valenciana">C. Valenciana</option>
+              <option value="País Vasco">País Vasco</option>
+            </select>
+            <select class="filter-input" id="filter-relevancia">
+              <option value="0">Cualquier relevancia</option>
+              <option value="0.5">Alta relevancia ≥50%</option>
+              <option value="0.7">Muy alta ≥70%</option>
+            </select>
+          </div>
+          <div class="conv-list" id="conv-list">
+            <div class="empty-list">Cargando convocatorias…</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: detail + boletines -->
+    <div class="detail-panel">
+      <div class="panel" id="detail-panel">
+        <div class="detail-body">
+          <div class="detail-empty">
+            <div class="big-icon">📄</div>
+            <div>Selecciona una convocatoria para ver los detalles</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Boletines status -->
+      <div class="panel" style="margin-top:16px">
+        <div class="panel-header">
+          <div class="panel-title"><span class="icon">📡</span> Fuentes activas</div>
+        </div>
+        <div class="panel-body">
+          <div class="boletines-list" id="boletines-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHARTS -->
+  <div class="charts-row">
+    <div class="chart-panel">
+      <div class="chart-title">📊 Distribución por boletín</div>
+      <canvas id="chart-boletin"></canvas>
+    </div>
+    <div class="chart-panel">
+      <div class="chart-title">🗺️ Por comunidad autónoma</div>
+      <canvas id="chart-comunidad"></canvas>
+    </div>
+    <div class="chart-panel">
+      <div class="chart-title">📅 Evolución mensual</div>
+      <canvas id="chart-meses"></canvas>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────────────────
+const RAW_DATA = [{"id":"demo000022","titulo":"Convocatoria de ayudas Next Generation para digitalización empresarial","organismo":"ENISA – Empresa Nacional de Innovación","boletin":"BDNS","comunidad":"Nacional","fecha_publicacion":"2026-03-08","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10022","descripcion":"Se convocan convocatoria de ayudas next generation para digitalización empresarial dirigidas a pymes con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 30/03/2026","importe_maximo":"hasta 1.000.000 €","sectores":["Industria","Manufactura"],"tipo_beneficiario":["Pymes","Autónomos"],"relevancia":0.9,"fecha_scraping":"2026-03-08T21:50:38.704602"},{"id":"demo000057","titulo":"Incentivos a la investigación colaborativa empresa-universidad","organismo":"Red.es – Entidad Pública Empresarial","boletin":"BDNS","comunidad":"Nacional","fecha_publicacion":"2026-03-08","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10057","descripcion":"Se convocan incentivos a la investigación colaborativa empresa-universidad dirigidas a pymes con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 16/05/2026","importe_maximo":"hasta 1.000.000 €","sectores":["Comercio","Retail"],"tipo_beneficiario":["Autónomos"],"relevancia":0.66,"fecha_scraping":"2026-03-08T21:50:38.705811"},{"id":"demo000041","titulo":"Convocatoria de becas para proyectos de cooperación empresarial internacional","organismo":"SPRI – Agencia de Desarrollo Empresarial País Vasco","boletin":"DOGV","comunidad":"Comunitat Valenciana","fecha_publicacion":"2026-03-04","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10041","descripcion":"Se convocan convocatoria de becas para proyectos de cooperación empresarial internacional dirigidas a startups con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 05/06/2026","importe_maximo":"","sectores":["Comercio","Retail"],"tipo_beneficiario":["Microempresas"],"relevancia":0.39,"fecha_scraping":"2026-03-08T21:50:38.705267"},{"id":"demo000018","titulo":"Convocatoria de préstamos participativos para startups tecnológicas","organismo":"ENISA – Empresa Nacional de Innovación","boletin":"BOPV","comunidad":"País Vasco","fecha_publicacion":"2026-03-01","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10018","descripcion":"Se convocan convocatoria de préstamos participativos para startups tecnológicas dirigidas a grandes empresas con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 03/06/2026","importe_maximo":"hasta 200.000 €","sectores":["Industria","Manufactura"],"tipo_beneficiario":["Autónomos"],"relevancia":0.64,"fecha_scraping":"2026-03-08T21:50:38.704454"},{"id":"demo000031","titulo":"Subvenciones para proyectos de accesibilidad e inclusión en empresas","organismo":"CDTI – Centro para el Desarrollo Tecnológico Industrial","boletin":"BOPV","comunidad":"País Vasco","fecha_publicacion":"2026-03-01","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10031","descripcion":"Se convocan subvenciones para proyectos de accesibilidad e inclusión en empresas dirigidas a cualquier empresa con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 02/04/2026","importe_maximo":"hasta 500.000 €","sectores":["Industria","Manufactura"],"tipo_beneficiario":["Cualquier empresa"],"relevancia":0.35,"fecha_scraping":"2026-03-08T21:50:38.704904"},{"id":"demo000069","titulo":"Subvenciones para la internacionalización de pymes exportadoras","organismo":"Instituto para la Diversificación y Ahorro de la Energía (IDAE)","boletin":"BOJA","comunidad":"Andalucía","fecha_publicacion":"2026-02-28","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10069","descripcion":"Se convocan subvenciones para la internacionalización de pymes exportadoras dirigidas a autónomos con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 28/03/2026","importe_maximo":"hasta 50.000 €","sectores":["Energía","Sostenibilidad"],"tipo_beneficiario":["Grandes empresas","Pymes"],"relevancia":0.89,"fecha_scraping":"2026-03-08T21:50:38.706234"},{"id":"demo000005","titulo":"Incentivos a la creación de empleo estable en sectores estratégicos","organismo":"SPRI – Agencia de Desarrollo Empresarial País Vasco","boletin":"DOGV","comunidad":"Comunitat Valenciana","fecha_publicacion":"2026-02-21","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10005","descripcion":"Se convocan incentivos a la creación de empleo estable en sectores estratégicos dirigidas a microempresas con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 02/04/2026","importe_maximo":"","sectores":["Agroalimentario"],"tipo_beneficiario":["Autónomos"],"relevancia":0.73,"fecha_scraping":"2026-03-08T21:50:38.704013"},{"id":"demo000021","titulo":"Subvenciones para proyectos de accesibilidad e inclusión en empresas","organismo":"IVACE – Institut Valencià de Competitivitat Empresarial","boletin":"DOGC","comunidad":"Cataluña","fecha_publicacion":"2026-02-21","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10021","descripcion":"Se convocan subvenciones para proyectos de accesibilidad e inclusión en empresas dirigidas a grandes empresas con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 20/04/2026","importe_maximo":"hasta 200.000 €","sectores":["Turismo","Hostelería"],"tipo_beneficiario":["Pymes","Autónomos"],"relevancia":0.71,"fecha_scraping":"2026-03-08T21:50:38.704569"},{"id":"demo000032","titulo":"Subvenciones para la internacionalización de pymes exportadoras","organismo":"Comunidad de Madrid – Dirección General de Innovación","boletin":"BOPV","comunidad":"País Vasco","fecha_publicacion":"2026-02-21","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10032","descripcion":"Se convocan subvenciones para la internacionalización de pymes exportadoras dirigidas a cualquier empresa con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 23/04/2026","importe_maximo":"hasta 50.000 €","sectores":["Servicios Profesionales"],"tipo_beneficiario":["Pymes","Autónomos"],"relevancia":0.59,"fecha_scraping":"2026-03-08T21:50:38.704973"},{"id":"demo000058","titulo":"Programa de financiación de proyectos de energía renovable en pymes","organismo":"ENISA – Empresa Nacional de Innovación","boletin":"BOE","comunidad":"Nacional","fecha_publicacion":"2026-02-21","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10058","descripcion":"Se convocan programa de financiación de proyectos de energía renovable en pymes dirigidas a microempresas con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 09/04/2026","importe_maximo":"10.000 – 100.000 €","sectores":["Construcción","Inmobiliario"],"tipo_beneficiario":["Cualquier empresa"],"relevancia":0.72,"fecha_scraping":"2026-03-08T21:50:38.705842"},{"id":"demo000019","titulo":"Convocatoria de apoyo a empresas exportadoras de servicios digitales","organismo":"SPRI – Agencia de Desarrollo Empresarial País Vasco","boletin":"BOE","comunidad":"Nacional","fecha_publicacion":"2026-02-20","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10019","descripcion":"Se convocan convocatoria de apoyo a empresas exportadoras de servicios digitales dirigidas a grandes empresas con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 22/05/2026","importe_maximo":"","sectores":["Comercio","Retail"],"tipo_beneficiario":["Startups","Empresas emergentes"],"relevancia":0.67,"fecha_scraping":"2026-03-08T21:50:38.704484"},{"id":"demo000070","titulo":"Convocatoria de becas para proyectos de cooperación empresarial internacional","organismo":"ENISA – Empresa Nacional de Innovación","boletin":"BOCM","comunidad":"Madrid","fecha_publicacion":"2026-02-20","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10070","descripcion":"Se convocan convocatoria de becas para proyectos de cooperación empresarial internacional dirigidas a microempresas con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 06/04/2026","importe_maximo":"hasta 1.000.000 €","sectores":["Logística","Transporte"],"tipo_beneficiario":["Autónomos"],"relevancia":0.48,"fecha_scraping":"2026-03-08T21:50:38.706263"},{"id":"demo000037","titulo":"Subvenciones a proyectos de ciberseguridad para pymes","organismo":"Ministerio de Ciencia e Innovación","boletin":"BOJA","comunidad":"Andalucía","fecha_publicacion":"2026-02-19","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10037","descripcion":"Se convocan subvenciones a proyectos de ciberseguridad para pymes dirigidas a startups con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 06/04/2026","importe_maximo":"hasta 200.000 €","sectores":["Construcción","Inmobiliario"],"tipo_beneficiario":["Grandes empresas","Pymes"],"relevancia":0.49,"fecha_scraping":"2026-03-08T21:50:38.705137"},{"id":"demo000043","titulo":"Apoyo a microempresas en zonas rurales – LEADER 2024","organismo":"Red.es – Entidad Pública Empresarial","boletin":"DOGC","comunidad":"Cataluña","fecha_publicacion":"2026-02-17","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10043","descripcion":"Se convocan apoyo a microempresas en zonas rurales – leader 2024 dirigidas a grandes empresas con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 12/04/2026","importe_maximo":"hasta 500.000 €","sectores":["Salud","Biotecnología"],"tipo_beneficiario":["Pymes","Autónomos"],"relevancia":0.43,"fecha_scraping":"2026-03-08T21:50:38.705341"},{"id":"demo000006","titulo":"Subvenciones para certificaciones de calidad y normas ISO en pymes","organismo":"Junta de Andalucía – Agencia IDEA","boletin":"BOPV","comunidad":"País Vasco","fecha_publicacion":"2026-02-12","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10006","descripcion":"Se convocan subvenciones para certificaciones de calidad y normas iso en pymes dirigidas a autónomos con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 31/03/2026","importe_maximo":"hasta 50.000 €","sectores":["Energía","Sostenibilidad"],"tipo_beneficiario":["Startups","Empresas emergentes"],"relevancia":0.99,"fecha_scraping":"2026-03-08T21:50:38.704045"},{"id":"demo000026","titulo":"Ayudas para la contratación de personas con discapacidad en empresas","organismo":"ENISA – Empresa Nacional de Innovación","boletin":"BOPV","comunidad":"País Vasco","fecha_publicacion":"2026-02-12","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10026","descripcion":"Se convocan ayudas para la contratación de personas con discapacidad en empresas dirigidas a grandes empresas con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 30/05/2026","importe_maximo":"10.000 – 100.000 €","sectores":["Comercio","Retail"],"tipo_beneficiario":["Microempresas"],"relevancia":0.43,"fecha_scraping":"2026-03-08T21:50:38.704732"},{"id":"demo000035","titulo":"Programa de apoyo al emprendimiento y la creación de empresas innovadoras","organismo":"SPRI – Agencia de Desarrollo Empresarial País Vasco","boletin":"BOE","comunidad":"Nacional","fecha_publicacion":"2026-02-09","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10035","descripcion":"Se convocan programa de apoyo al emprendimiento y la creación de empresas innovadoras dirigidas a cualquier empresa con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 25/04/2026","importe_maximo":"hasta 500.000 €","sectores":["Turismo","Hostelería"],"tipo_beneficiario":["Pymes","Autónomos"],"relevancia":0.92,"fecha_scraping":"2026-03-08T21:50:38.705064"},{"id":"demo000078","titulo":"Incentivos a la inversión empresarial en zonas de especial desarrollo","organismo":"IVACE – Institut Valencià de Competitivitat Empresarial","boletin":"BOJA","comunidad":"Andalucía","fecha_publicacion":"2026-02-09","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10078","descripcion":"Se convocan incentivos a la inversión empresarial en zonas de especial desarrollo dirigidas a startups con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 25/04/2026","importe_maximo":"hasta 5.000.000 €","sectores":["Agroalimentario"],"tipo_beneficiario":["Cualquier empresa"],"relevancia":0.79,"fecha_scraping":"2026-03-08T21:50:38.706604"},{"id":"demo000024","titulo":"Convocatoria de ayudas Next Generation para digitalización empresarial","organismo":"IVACE – Institut Valencià de Competitivitat Empresarial","boletin":"BOCM","comunidad":"Madrid","fecha_publicacion":"2026-02-05","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10024","descripcion":"Se convocan convocatoria de ayudas next generation para digitalización empresarial dirigidas a microempresas con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 14/05/2026","importe_maximo":"hasta 1.000.000 €","sectores":["Industria","Manufactura"],"tipo_beneficiario":["Pymes","Autónomos"],"relevancia":0.76,"fecha_scraping":"2026-03-08T21:50:38.704662"},{"id":"demo000044","titulo":"Convocatoria de apoyo a la formación continua en empresas","organismo":"Instituto para la Diversificación y Ahorro de la Energía (IDAE)","boletin":"BOJA","comunidad":"Andalucía","fecha_publicacion":"2026-02-05","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10044","descripcion":"Se convocan convocatoria de apoyo a la formación continua en empresas dirigidas a startups con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 12/04/2026","importe_maximo":"hasta 200.000 €","sectores":["Salud","Biotecnología"],"tipo_beneficiario":["Pymes","Autónomos"],"relevancia":0.9,"fecha_scraping":"2026-03-08T21:50:38.705372"},{"id":"demo000077","titulo":"Programa de ayudas a la transformación digital del comercio minorista","organismo":"IVACE – Institut Valencià de Competitivitat Empresarial","boletin":"BOE","comunidad":"Nacional","fecha_publicacion":"2026-02-05","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10077","descripcion":"Se convocan programa de ayudas a la transformación digital del comercio minorista dirigidas a microempresas con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 03/06/2026","importe_maximo":"3.000 – 25.000 €","sectores":["Turismo","Hostelería"],"tipo_beneficiario":["Pymes","Autónomos"],"relevancia":0.65,"fecha_scraping":"2026-03-08T21:50:38.706574"},{"id":"demo000068","titulo":"Programa de ayudas a la transformación digital del comercio minorista","organismo":"Comunidad de Madrid – Dirección General de Innovación","boletin":"DOGC","comunidad":"Cataluña","fecha_publicacion":"2026-02-04","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10068","descripcion":"Se convocan programa de ayudas a la transformación digital del comercio minorista dirigidas a pymes con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 22/05/2026","importe_maximo":"hasta 50.000 €","sectores":["Construcción","Inmobiliario"],"tipo_beneficiario":["Pymes","Autónomos"],"relevancia":1.0,"fecha_scraping":"2026-03-08T21:50:38.706204"},{"id":"demo000011","titulo":"Incentivos a la creación de empleo estable en sectores estratégicos","organismo":"CDTI – Centro para el Desarrollo Tecnológico Industrial","boletin":"DOGV","comunidad":"Comunitat Valenciana","fecha_publicacion":"2026-02-03","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10011","descripcion":"Se convocan incentivos a la creación de empleo estable en sectores estratégicos dirigidas a grandes empresas con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 23/04/2026","importe_maximo":"","sectores":["Construcción","Inmobiliario"],"tipo_beneficiario":["Startups","Empresas emergentes"],"relevancia":0.82,"fecha_scraping":"2026-03-08T21:50:38.704215"},{"id":"demo000010","titulo":"Ayudas al empleo joven en empresas con menos de 50 trabajadores","organismo":"Comunidad de Madrid – Dirección General de Innovación","boletin":"BOE","comunidad":"Nacional","fecha_publicacion":"2026-02-02","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10010","descripcion":"Se convocan ayudas al empleo joven en empresas con menos de 50 trabajadores dirigidas a pymes con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 19/04/2026","importe_maximo":"hasta 5.000.000 €","sectores":["Energía","Sostenibilidad"],"tipo_beneficiario":["Autónomos"],"relevancia":0.65,"fecha_scraping":"2026-03-08T21:50:38.704175"},{"id":"demo000061","titulo":"Convocatoria de préstamos participativos para startups tecnológicas","organismo":"ENISA – Empresa Nacional de Innovación","boletin":"DOGV","comunidad":"Comunitat Valenciana","fecha_publicacion":"2026-02-02","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10061","descripcion":"Se convocan convocatoria de préstamos participativos para startups tecnológicas dirigidas a startups con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 02/05/2026","importe_maximo":"","sectores":["Industria","Manufactura"],"tipo_beneficiario":["Grandes empresas","Pymes"],"relevancia":0.41,"fecha_scraping":"2026-03-08T21:50:38.705972"},{"id":"demo000000","titulo":"Ayudas para la contratación de personas con discapacidad en empresas","organismo":"Ministerio de Industria, Comercio y Turismo","boletin":"DOGV","comunidad":"Comunitat Valenciana","fecha_publicacion":"2026-02-01","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10000","descripcion":"Se convocan ayudas para la contratación de personas con discapacidad en empresas dirigidas a grandes empresas con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 20/04/2026","importe_maximo":"hasta 500.000 €","sectores":["Industria","Manufactura"],"tipo_beneficiario":["Autónomos"],"relevancia":0.82,"fecha_scraping":"2026-03-08T21:50:38.703768"},{"id":"demo000023","titulo":"Subvenciones para proyectos de accesibilidad e inclusión en empresas","organismo":"ENISA – Empresa Nacional de Innovación","boletin":"BOE","comunidad":"Nacional","fecha_publicacion":"2026-02-01","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10023","descripcion":"Se convocan subvenciones para proyectos de accesibilidad e inclusión en empresas dirigidas a autónomos con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 24/05/2026","importe_maximo":"hasta 1.000.000 €","sectores":["Construcción","Inmobiliario"],"tipo_beneficiario":["Grandes empresas","Pymes"],"relevancia":0.81,"fecha_scraping":"2026-03-08T21:50:38.704631"},{"id":"demo000046","titulo":"Programa de ayudas a la transformación digital del comercio minorista","organismo":"Ministerio de Ciencia e Innovación","boletin":"BOJA","comunidad":"Andalucía","fecha_publicacion":"2026-02-01","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10046","descripcion":"Se convocan programa de ayudas a la transformación digital del comercio minorista dirigidas a startups con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 27/05/2026","importe_maximo":"3.000 – 25.000 €","sectores":["Construcción","Inmobiliario"],"tipo_beneficiario":["Startups","Empresas emergentes"],"relevancia":0.96,"fecha_scraping":"2026-03-08T21:50:38.705451"},{"id":"demo000052","titulo":"Apoyo a microempresas en zonas rurales – LEADER 2024","organismo":"Junta de Andalucía – Agencia IDEA","boletin":"BDNS","comunidad":"Nacional","fecha_publicacion":"2026-01-29","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10052","descripcion":"Se convocan apoyo a microempresas en zonas rurales – leader 2024 dirigidas a microempresas con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 01/06/2026","importe_maximo":"hasta 50.000 €","sectores":["Agroalimentario"],"tipo_beneficiario":["Startups","Empresas emergentes"],"relevancia":0.45,"fecha_scraping":"2026-03-08T21:50:38.705648"},{"id":"demo000073","titulo":"Ayudas para la contratación de personas con discapacidad en empresas","organismo":"Red.es – Entidad Pública Empresarial","boletin":"BDNS","comunidad":"Nacional","fecha_publicacion":"2026-01-29","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10073","descripcion":"Se convocan ayudas para la contratación de personas con discapacidad en empresas dirigidas a autónomos con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 07/04/2026","importe_maximo":"hasta 50.000 €","sectores":["Turismo","Hostelería"],"tipo_beneficiario":["Cualquier empresa"],"relevancia":0.6,"fecha_scraping":"2026-03-08T21:50:38.706437"},{"id":"demo000055","titulo":"Subvenciones para la internacionalización de pymes exportadoras","organismo":"Instituto para la Diversificación y Ahorro de la Energía (IDAE)","boletin":"BOPV","comunidad":"País Vasco","fecha_publicacion":"2026-01-28","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10055","descripcion":"Se convocan subvenciones para la internacionalización de pymes exportadoras dirigidas a grandes empresas con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 17/04/2026","importe_maximo":"hasta 500.000 €","sectores":["Tecnología","Innovación"],"tipo_beneficiario":["Pymes","Autónomos"],"relevancia":0.47,"fecha_scraping":"2026-03-08T21:50:38.705748"},{"id":"demo000033","titulo":"Convocatoria de ayudas Next Generation para digitalización empresarial","organismo":"SPRI – Agencia de Desarrollo Empresarial País Vasco","boletin":"BOCM","comunidad":"Madrid","fecha_publicacion":"2026-01-27","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10033","descripcion":"Se convocan convocatoria de ayudas next generation para digitalización empresarial dirigidas a startups con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 18/04/2026","importe_maximo":"hasta 5.000.000 €","sectores":["Energía","Sostenibilidad"],"tipo_beneficiario":["Startups","Empresas emergentes"],"relevancia":0.58,"fecha_scraping":"2026-03-08T21:50:38.705003"},{"id":"demo000038","titulo":"Financiación para proyectos de eficiencia energética en sector industrial","organismo":"Red.es – Entidad Pública Empresarial","boletin":"BOCM","comunidad":"Madrid","fecha_publicacion":"2026-01-24","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10038","descripcion":"Se convocan financiación para proyectos de eficiencia energética en sector industrial dirigidas a grandes empresas con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 25/04/2026","importe_maximo":"","sectores":["Logística","Transporte"],"tipo_beneficiario":["Startups","Empresas emergentes"],"relevancia":0.93,"fecha_scraping":"2026-03-08T21:50:38.705168"},{"id":"demo000065","titulo":"Convocatoria de ayudas para proyectos de I+D+i en empresas industriales","organismo":"Comunidad de Madrid – Dirección General de Innovación","boletin":"DOGC","comunidad":"Cataluña","fecha_publicacion":"2026-01-24","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10065","descripcion":"Se convocan convocatoria de ayudas para proyectos de i+d+i en empresas industriales dirigidas a autónomos con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 13/05/2026","importe_maximo":"hasta 500.000 €","sectores":["Logística","Transporte"],"tipo_beneficiario":["Grandes empresas","Pymes"],"relevancia":0.99,"fecha_scraping":"2026-03-08T21:50:38.706112"},{"id":"demo000045","titulo":"Financiación para proyectos de eficiencia energética en sector industrial","organismo":"IVACE – Institut Valencià de Competitivitat Empresarial","boletin":"BDNS","comunidad":"Nacional","fecha_publicacion":"2026-01-23","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10045","descripcion":"Se convocan financiación para proyectos de eficiencia energética en sector industrial dirigidas a startups con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 21/04/2026","importe_maximo":"hasta 1.000.000 €","sectores":["Tecnología","Innovación"],"tipo_beneficiario":["Autónomos"],"relevancia":0.44,"fecha_scraping":"2026-03-08T21:50:38.705419"},{"id":"demo000042","titulo":"Subvenciones para certificaciones de calidad y normas ISO en pymes","organismo":"Ministerio de Industria, Comercio y Turismo","boletin":"BOJA","comunidad":"Andalucía","fecha_publicacion":"2026-01-22","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10042","descripcion":"Se convocan subvenciones para certificaciones de calidad y normas iso en pymes dirigidas a grandes empresas con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 23/04/2026","importe_maximo":"hasta 200.000 €","sectores":["Turismo","Hostelería"],"tipo_beneficiario":["Cualquier empresa"],"relevancia":0.92,"fecha_scraping":"2026-03-08T21:50:38.705299"},{"id":"demo000012","titulo":"Convocatoria de ayudas Next Generation para digitalización empresarial","organismo":"Comunidad de Madrid – Dirección General de Innovación","boletin":"DOGC","comunidad":"Cataluña","fecha_publicacion":"2026-01-21","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10012","descripcion":"Se convocan convocatoria de ayudas next generation para digitalización empresarial dirigidas a grandes empresas con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 09/04/2026","importe_maximo":"","sectores":["Logística","Transporte"],"tipo_beneficiario":["Pymes","Autónomos"],"relevancia":0.83,"fecha_scraping":"2026-03-08T21:50:38.704253"},{"id":"demo000004","titulo":"Ayudas para la contratación de personas con discapacidad en empresas","organismo":"Ministerio de Ciencia e Innovación","boletin":"BOJA","comunidad":"Andalucía","fecha_publicacion":"2026-01-19","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10004","descripcion":"Se convocan ayudas para la contratación de personas con discapacidad en empresas dirigidas a pymes con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 07/05/2026","importe_maximo":"hasta 5.000.000 €","sectores":["Servicios Profesionales"],"tipo_beneficiario":["Startups","Empresas emergentes"],"relevancia":0.86,"fecha_scraping":"2026-03-08T21:50:38.703968"},{"id":"demo000007","titulo":"Subvenciones para la internacionalización de pymes exportadoras","organismo":"Ministerio de Ciencia e Innovación","boletin":"BOPV","comunidad":"País Vasco","fecha_publicacion":"2026-01-19","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10007","descripcion":"Se convocan subvenciones para la internacionalización de pymes exportadoras dirigidas a startups con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 20/05/2026","importe_maximo":"hasta 5.000.000 €","sectores":["Comercio","Retail"],"tipo_beneficiario":["Startups","Empresas emergentes"],"relevancia":0.55,"fecha_scraping":"2026-03-08T21:50:38.704075"},{"id":"demo000067","titulo":"Subvenciones para la digitalización de pymes y autónomos – Kit Digital","organismo":"Consejería de Economía y Hacienda","boletin":"BDNS","comunidad":"Nacional","fecha_publicacion":"2026-01-19","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10067","descripcion":"Se convocan subvenciones para la digitalización de pymes y autónomos – kit digital dirigidas a startups con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 19/04/2026","importe_maximo":"10.000 – 100.000 €","sectores":["Turismo","Hostelería"],"tipo_beneficiario":["Startups","Empresas emergentes"],"relevancia":0.83,"fecha_scraping":"2026-03-08T21:50:38.706172"},{"id":"demo000072","titulo":"Convocatoria de ayudas Next Generation para digitalización empresarial","organismo":"Instituto para la Diversificación y Ahorro de la Energía (IDAE)","boletin":"BOJA","comunidad":"Andalucía","fecha_publicacion":"2026-01-19","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10072","descripcion":"Se convocan convocatoria de ayudas next generation para digitalización empresarial dirigidas a microempresas con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 17/04/2026","importe_maximo":"hasta 200.000 €","sectores":["Servicios Profesionales"],"tipo_beneficiario":["Autónomos"],"relevancia":0.88,"fecha_scraping":"2026-03-08T21:50:38.706405"},{"id":"demo000028","titulo":"Subvenciones para la internacionalización de pymes exportadoras","organismo":"CDTI – Centro para el Desarrollo Tecnológico Industrial","boletin":"BOPV","comunidad":"País Vasco","fecha_publicacion":"2026-01-15","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10028","descripcion":"Se convocan subvenciones para la internacionalización de pymes exportadoras dirigidas a microempresas con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 23/05/2026","importe_maximo":"hasta 1.000.000 €","sectores":["Salud","Biotecnología"],"tipo_beneficiario":["Pymes","Autónomos"],"relevancia":0.42,"fecha_scraping":"2026-03-08T21:50:38.704800"},{"id":"demo000063","titulo":"Subvenciones para la digitalización de pymes y autónomos – Kit Digital","organismo":"ENISA – Empresa Nacional de Innovación","boletin":"DOGC","comunidad":"Cataluña","fecha_publicacion":"2026-01-14","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10063","descripcion":"Se convocan subvenciones para la digitalización de pymes y autónomos – kit digital dirigidas a microempresas con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 05/06/2026","importe_maximo":"hasta 50.000 €","sectores":["Servicios Profesionales"],"tipo_beneficiario":["Microempresas"],"relevancia":0.63,"fecha_scraping":"2026-03-08T21:50:38.706047"},{"id":"demo000064","titulo":"Convocatoria de préstamos participativos para startups tecnológicas","organismo":"Comunidad de Madrid – Dirección General de Innovación","boletin":"BOJA","comunidad":"Andalucía","fecha_publicacion":"2026-01-14","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10064","descripcion":"Se convocan convocatoria de préstamos participativos para startups tecnológicas dirigidas a cualquier empresa con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 31/05/2026","importe_maximo":"hasta 1.000.000 €","sectores":["Logística","Transporte"],"tipo_beneficiario":["Grandes empresas","Pymes"],"relevancia":0.49,"fecha_scraping":"2026-03-08T21:50:38.706082"},{"id":"demo000001","titulo":"Programa de apoyo al emprendimiento y la creación de empresas innovadoras","organismo":"Junta de Andalucía – Agencia IDEA","boletin":"BOCM","comunidad":"Madrid","fecha_publicacion":"2026-01-13","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10001","descripcion":"Se convocan programa de apoyo al emprendimiento y la creación de empresas innovadoras dirigidas a pymes con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 26/03/2026","importe_maximo":"hasta 200.000 €","sectores":["Energía","Sostenibilidad"],"tipo_beneficiario":["Grandes empresas","Pymes"],"relevancia":0.65,"fecha_scraping":"2026-03-08T21:50:38.703822"},{"id":"demo000027","titulo":"Subvenciones para la internacionalización de pymes exportadoras","organismo":"Ministerio de Ciencia e Innovación","boletin":"DOGC","comunidad":"Cataluña","fecha_publicacion":"2026-01-11","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10027","descripcion":"Se convocan subvenciones para la internacionalización de pymes exportadoras dirigidas a cualquier empresa con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 04/04/2026","importe_maximo":"hasta 50.000 €","sectores":["Construcción","Inmobiliario"],"tipo_beneficiario":["Pymes","Autónomos"],"relevancia":0.98,"fecha_scraping":"2026-03-08T21:50:38.704763"},{"id":"demo000036","titulo":"Convocatoria de préstamos participativos para startups tecnológicas","organismo":"CDTI – Centro para el Desarrollo Tecnológico Industrial","boletin":"BOJA","comunidad":"Andalucía","fecha_publicacion":"2026-01-11","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10036","descripcion":"Se convocan convocatoria de préstamos participativos para startups tecnológicas dirigidas a cualquier empresa con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 30/04/2026","importe_maximo":"","sectores":["Tecnología","Innovación"],"tipo_beneficiario":["Autónomos"],"relevancia":0.87,"fecha_scraping":"2026-03-08T21:50:38.705094"},{"id":"demo000040","titulo":"Programa de ayudas a la transformación digital del comercio minorista","organismo":"CDTI – Centro para el Desarrollo Tecnológico Industrial","boletin":"DOGV","comunidad":"Comunitat Valenciana","fecha_publicacion":"2026-01-11","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10040","descripcion":"Se convocan programa de ayudas a la transformación digital del comercio minorista dirigidas a cualquier empresa con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 16/05/2026","importe_maximo":"","sectores":["Tecnología","Innovación"],"tipo_beneficiario":["Pymes","Autónomos"],"relevancia":0.35,"fecha_scraping":"2026-03-08T21:50:38.705228"},{"id":"demo000015","titulo":"Convocatoria de apoyo a la formación continua en empresas","organismo":"CDTI – Centro para el Desarrollo Tecnológico Industrial","boletin":"BOJA","comunidad":"Andalucía","fecha_publicacion":"2026-01-09","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10015","descripcion":"Se convocan convocatoria de apoyo a la formación continua en empresas dirigidas a pymes con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 25/04/2026","importe_maximo":"","sectores":["Comercio","Retail"],"tipo_beneficiario":["Cualquier empresa"],"relevancia":0.94,"fecha_scraping":"2026-03-08T21:50:38.704358"},{"id":"demo000029","titulo":"Programa de cofinanciación de proyectos de economía circular","organismo":"Consejería de Economía y Hacienda","boletin":"BOE","comunidad":"Nacional","fecha_publicacion":"2026-01-09","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10029","descripcion":"Se convocan programa de cofinanciación de proyectos de economía circular dirigidas a startups con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 16/05/2026","importe_maximo":"","sectores":["Logística","Transporte"],"tipo_beneficiario":["Grandes empresas","Pymes"],"relevancia":0.43,"fecha_scraping":"2026-03-08T21:50:38.704833"},{"id":"demo000034","titulo":"Incentivos a la investigación colaborativa empresa-universidad","organismo":"Consejería de Economía y Hacienda","boletin":"DOGV","comunidad":"Comunitat Valenciana","fecha_publicacion":"2026-01-09","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10034","descripcion":"Se convocan incentivos a la investigación colaborativa empresa-universidad dirigidas a startups con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 01/04/2026","importe_maximo":"hasta 50.000 €","sectores":["Logística","Transporte"],"tipo_beneficiario":["Cualquier empresa"],"relevancia":1.0,"fecha_scraping":"2026-03-08T21:50:38.705033"},{"id":"demo000056","titulo":"Apoyo a microempresas en zonas rurales – LEADER 2024","organismo":"Ministerio de Ciencia e Innovación","boletin":"DOGC","comunidad":"Cataluña","fecha_publicacion":"2026-01-09","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10056","descripcion":"Se convocan apoyo a microempresas en zonas rurales – leader 2024 dirigidas a microempresas con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 04/06/2026","importe_maximo":"hasta 1.000.000 €","sectores":["Salud","Biotecnología"],"tipo_beneficiario":["Microempresas"],"relevancia":0.58,"fecha_scraping":"2026-03-08T21:50:38.705779"},{"id":"demo000025","titulo":"Convocatoria de apoyo a la formación continua en empresas","organismo":"Comunidad de Madrid – Dirección General de Innovación","boletin":"BOJA","comunidad":"Andalucía","fecha_publicacion":"2026-01-08","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10025","descripcion":"Se convocan convocatoria de apoyo a la formación continua en empresas dirigidas a autónomos con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 29/03/2026","importe_maximo":"hasta 200.000 €","sectores":["Tecnología","Innovación"],"tipo_beneficiario":["Microempresas"],"relevancia":0.81,"fecha_scraping":"2026-03-08T21:50:38.704700"},{"id":"demo000076","titulo":"Programa de financiación de proyectos de energía renovable en pymes","organismo":"IVACE – Institut Valencià de Competitivitat Empresarial","boletin":"BOPV","comunidad":"País Vasco","fecha_publicacion":"2026-01-08","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10076","descripcion":"Se convocan programa de financiación de proyectos de energía renovable en pymes dirigidas a microempresas con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 06/06/2026","importe_maximo":"hasta 2.000.000 €","sectores":["Turismo","Hostelería"],"tipo_beneficiario":["Grandes empresas","Pymes"],"relevancia":0.88,"fecha_scraping":"2026-03-08T21:50:38.706544"},{"id":"demo000059","titulo":"Incentivos a la creación de empleo estable en sectores estratégicos","organismo":"Junta de Andalucía – Agencia IDEA","boletin":"BOPV","comunidad":"País Vasco","fecha_publicacion":"2026-01-03","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10059","descripcion":"Se convocan incentivos a la creación de empleo estable en sectores estratégicos dirigidas a microempresas con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 01/06/2026","importe_maximo":"10.000 – 100.000 €","sectores":["Comercio","Retail"],"tipo_beneficiario":["Autónomos"],"relevancia":0.9,"fecha_scraping":"2026-03-08T21:50:38.705872"},{"id":"demo000049","titulo":"Convocatoria de apoyo a la formación continua en empresas","organismo":"Ministerio de Industria, Comercio y Turismo","boletin":"DOGV","comunidad":"Comunitat Valenciana","fecha_publicacion":"2026-01-01","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10049","descripcion":"Se convocan convocatoria de apoyo a la formación continua en empresas dirigidas a cualquier empresa con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 17/04/2026","importe_maximo":"hasta 5.000.000 €","sectores":["Salud","Biotecnología"],"tipo_beneficiario":["Pymes","Autónomos"],"relevancia":0.96,"fecha_scraping":"2026-03-08T21:50:38.705541"},{"id":"demo000079","titulo":"Programa de financiación de proyectos de energía renovable en pymes","organismo":"Ministerio de Industria, Comercio y Turismo","boletin":"BOJA","comunidad":"Andalucía","fecha_publicacion":"2026-01-01","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10079","descripcion":"Se convocan programa de financiación de proyectos de energía renovable en pymes dirigidas a grandes empresas con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 02/04/2026","importe_maximo":"hasta 1.000.000 €","sectores":["Salud","Biotecnología"],"tipo_beneficiario":["Microempresas"],"relevancia":0.69,"fecha_scraping":"2026-03-08T21:50:38.706635"},{"id":"demo000020","titulo":"Convocatoria de apoyo a la formación continua en empresas","organismo":"ENISA – Empresa Nacional de Innovación","boletin":"BOCM","comunidad":"Madrid","fecha_publicacion":"2025-12-29","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10020","descripcion":"Se convocan convocatoria de apoyo a la formación continua en empresas dirigidas a autónomos con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 17/04/2026","importe_maximo":"hasta 2.000.000 €","sectores":["Salud","Biotecnología"],"tipo_beneficiario":["Autónomos"],"relevancia":0.75,"fecha_scraping":"2026-03-08T21:50:38.704531"},{"id":"demo000030","titulo":"Subvenciones para la digitalización de pymes y autónomos – Kit Digital","organismo":"Junta de Andalucía – Agencia IDEA","boletin":"BDNS","comunidad":"Nacional","fecha_publicacion":"2025-12-29","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10030","descripcion":"Se convocan subvenciones para la digitalización de pymes y autónomos – kit digital dirigidas a pymes con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 02/05/2026","importe_maximo":"hasta 50.000 €","sectores":["Tecnología","Innovación"],"tipo_beneficiario":["Cualquier empresa"],"relevancia":0.63,"fecha_scraping":"2026-03-08T21:50:38.704866"},{"id":"demo000014","titulo":"Subvenciones para proyectos de accesibilidad e inclusión en empresas","organismo":"Consejería de Economía y Hacienda","boletin":"DOGC","comunidad":"Cataluña","fecha_publicacion":"2025-12-28","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10014","descripcion":"Se convocan subvenciones para proyectos de accesibilidad e inclusión en empresas dirigidas a pymes con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 06/04/2026","importe_maximo":"","sectores":["Agroalimentario"],"tipo_beneficiario":["Autónomos"],"relevancia":0.54,"fecha_scraping":"2026-03-08T21:50:38.704316"},{"id":"demo000051","titulo":"Ayudas para planes de igualdad y conciliación en empresas","organismo":"Consejería de Economía y Hacienda","boletin":"DOGC","comunidad":"Cataluña","fecha_publicacion":"2025-12-28","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10051","descripcion":"Se convocan ayudas para planes de igualdad y conciliación en empresas dirigidas a grandes empresas con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 16/04/2026","importe_maximo":"3.000 – 25.000 €","sectores":["Salud","Biotecnología"],"tipo_beneficiario":["Autónomos"],"relevancia":0.82,"fecha_scraping":"2026-03-08T21:50:38.705617"},{"id":"demo000047","titulo":"Programa de ayudas a la transformación digital del comercio minorista","organismo":"CDTI – Centro para el Desarrollo Tecnológico Industrial","boletin":"BOE","comunidad":"Nacional","fecha_publicacion":"2025-12-24","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10047","descripcion":"Se convocan programa de ayudas a la transformación digital del comercio minorista dirigidas a startups con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 27/03/2026","importe_maximo":"hasta 200.000 €","sectores":["Servicios Profesionales"],"tipo_beneficiario":["Microempresas"],"relevancia":0.54,"fecha_scraping":"2026-03-08T21:50:38.705482"},{"id":"demo000066","titulo":"Convocatoria de ayudas para proyectos de I+D+i en empresas industriales","organismo":"Comunidad de Madrid – Dirección General de Innovación","boletin":"BOCM","comunidad":"Madrid","fecha_publicacion":"2025-12-23","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10066","descripcion":"Se convocan convocatoria de ayudas para proyectos de i+d+i en empresas industriales dirigidas a cualquier empresa con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 26/03/2026","importe_maximo":"hasta 200.000 €","sectores":["Salud","Biotecnología"],"tipo_beneficiario":["Grandes empresas","Pymes"],"relevancia":0.91,"fecha_scraping":"2026-03-08T21:50:38.706141"},{"id":"demo000017","titulo":"Subvenciones para proyectos de accesibilidad e inclusión en empresas","organismo":"Ministerio de Industria, Comercio y Turismo","boletin":"BOPV","comunidad":"País Vasco","fecha_publicacion":"2025-12-22","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10017","descripcion":"Se convocan subvenciones para proyectos de accesibilidad e inclusión en empresas dirigidas a startups con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 24/05/2026","importe_maximo":"hasta 50.000 €","sectores":["Industria","Manufactura"],"tipo_beneficiario":["Startups","Empresas emergentes"],"relevancia":0.92,"fecha_scraping":"2026-03-08T21:50:38.704420"},{"id":"demo000048","titulo":"Ayudas al empleo joven en empresas con menos de 50 trabajadores","organismo":"Comunidad de Madrid – Dirección General de Innovación","boletin":"BOPV","comunidad":"País Vasco","fecha_publicacion":"2025-12-21","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10048","descripcion":"Se convocan ayudas al empleo joven en empresas con menos de 50 trabajadores dirigidas a cualquier empresa con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 06/04/2026","importe_maximo":"3.000 – 25.000 €","sectores":["Servicios Profesionales"],"tipo_beneficiario":["Grandes empresas","Pymes"],"relevancia":0.48,"fecha_scraping":"2026-03-08T21:50:38.705512"},{"id":"demo000071","titulo":"Incentivos a la inversión empresarial en zonas de especial desarrollo","organismo":"Junta de Andalucía – Agencia IDEA","boletin":"BOJA","comunidad":"Andalucía","fecha_publicacion":"2025-12-21","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10071","descripcion":"Se convocan incentivos a la inversión empresarial en zonas de especial desarrollo dirigidas a autónomos con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 06/04/2026","importe_maximo":"hasta 500.000 €","sectores":["Agroalimentario"],"tipo_beneficiario":["Pymes","Autónomos"],"relevancia":0.71,"fecha_scraping":"2026-03-08T21:50:38.706374"},{"id":"demo000013","titulo":"Ayudas para la contratación de personas con discapacidad en empresas","organismo":"CDTI – Centro para el Desarrollo Tecnológico Industrial","boletin":"BOPV","comunidad":"País Vasco","fecha_publicacion":"2025-12-18","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10013","descripcion":"Se convocan ayudas para la contratación de personas con discapacidad en empresas dirigidas a grandes empresas con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 16/05/2026","importe_maximo":"hasta 200.000 €","sectores":["Salud","Biotecnología"],"tipo_beneficiario":["Microempresas"],"relevancia":0.72,"fecha_scraping":"2026-03-08T21:50:38.704285"},{"id":"demo000009","titulo":"Programa de cofinanciación de proyectos de economía circular","organismo":"Consejería de Economía y Hacienda","boletin":"DOGC","comunidad":"Cataluña","fecha_publicacion":"2025-12-17","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10009","descripcion":"Se convocan programa de cofinanciación de proyectos de economía circular dirigidas a autónomos con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 02/06/2026","importe_maximo":"hasta 1.000.000 €","sectores":["Turismo","Hostelería"],"tipo_beneficiario":["Pymes","Autónomos"],"relevancia":0.46,"fecha_scraping":"2026-03-08T21:50:38.704144"},{"id":"demo000016","titulo":"Incentivos a la investigación colaborativa empresa-universidad","organismo":"Consejería de Economía y Hacienda","boletin":"BOPV","comunidad":"País Vasco","fecha_publicacion":"2025-12-17","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10016","descripcion":"Se convocan incentivos a la investigación colaborativa empresa-universidad dirigidas a cualquier empresa con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 17/04/2026","importe_maximo":"hasta 500.000 €","sectores":["Turismo","Hostelería"],"tipo_beneficiario":["Grandes empresas","Pymes"],"relevancia":0.68,"fecha_scraping":"2026-03-08T21:50:38.704389"},{"id":"demo000039","titulo":"Subvenciones para la digitalización de pymes y autónomos – Kit Digital","organismo":"Ministerio de Ciencia e Innovación","boletin":"BOPV","comunidad":"País Vasco","fecha_publicacion":"2025-12-17","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10039","descripcion":"Se convocan subvenciones para la digitalización de pymes y autónomos – kit digital dirigidas a microempresas con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 27/04/2026","importe_maximo":"hasta 50.000 €","sectores":["Tecnología","Innovación"],"tipo_beneficiario":["Startups","Empresas emergentes"],"relevancia":0.84,"fecha_scraping":"2026-03-08T21:50:38.705198"},{"id":"demo000060","titulo":"Programa de ayudas a la transformación digital del comercio minorista","organismo":"ENISA – Empresa Nacional de Innovación","boletin":"DOGC","comunidad":"Cataluña","fecha_publicacion":"2025-12-17","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10060","descripcion":"Se convocan programa de ayudas a la transformación digital del comercio minorista dirigidas a startups con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 28/05/2026","importe_maximo":"10.000 – 100.000 €","sectores":["Energía","Sostenibilidad"],"tipo_beneficiario":["Startups","Empresas emergentes"],"relevancia":0.61,"fecha_scraping":"2026-03-08T21:50:38.705929"},{"id":"demo000074","titulo":"Programa de apoyo al emprendimiento y la creación de empresas innovadoras","organismo":"SPRI – Agencia de Desarrollo Empresarial País Vasco","boletin":"BOJA","comunidad":"Andalucía","fecha_publicacion":"2025-12-16","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10074","descripcion":"Se convocan programa de apoyo al emprendimiento y la creación de empresas innovadoras dirigidas a startups con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 24/03/2026","importe_maximo":"3.000 – 25.000 €","sectores":["Logística","Transporte"],"tipo_beneficiario":["Pymes","Autónomos"],"relevancia":0.6,"fecha_scraping":"2026-03-08T21:50:38.706480"},{"id":"demo000002","titulo":"Programa de financiación de proyectos de energía renovable en pymes","organismo":"ENISA – Empresa Nacional de Innovación","boletin":"BOE","comunidad":"Nacional","fecha_publicacion":"2025-12-15","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10002","descripcion":"Se convocan programa de financiación de proyectos de energía renovable en pymes dirigidas a autónomos con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 31/05/2026","importe_maximo":"3.000 – 25.000 €","sectores":["Energía","Sostenibilidad"],"tipo_beneficiario":["Microempresas"],"relevancia":0.71,"fecha_scraping":"2026-03-08T21:50:38.703878"},{"id":"demo000053","titulo":"Convocatoria de ayudas Next Generation para digitalización empresarial","organismo":"Junta de Andalucía – Agencia IDEA","boletin":"BOPV","comunidad":"País Vasco","fecha_publicacion":"2025-12-15","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10053","descripcion":"Se convocan convocatoria de ayudas next generation para digitalización empresarial dirigidas a startups con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 21/05/2026","importe_maximo":"10.000 – 100.000 €","sectores":["Logística","Transporte"],"tipo_beneficiario":["Autónomos"],"relevancia":0.45,"fecha_scraping":"2026-03-08T21:50:38.705686"},{"id":"demo000050","titulo":"Apoyo a microempresas en zonas rurales – LEADER 2024","organismo":"Agència per la Competitivitat de l'Empresa (ACCIÓ)","boletin":"BOJA","comunidad":"Andalucía","fecha_publicacion":"2025-12-14","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10050","descripcion":"Se convocan apoyo a microempresas en zonas rurales – leader 2024 dirigidas a pymes con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 30/04/2026","importe_maximo":"","sectores":["Agroalimentario"],"tipo_beneficiario":["Autónomos"],"relevancia":0.59,"fecha_scraping":"2026-03-08T21:50:38.705572"},{"id":"demo000054","titulo":"Financiación de proyectos de movilidad eléctrica en flotas empresariales","organismo":"CDTI – Centro para el Desarrollo Tecnológico Industrial","boletin":"DOGC","comunidad":"Cataluña","fecha_publicacion":"2025-12-14","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10054","descripcion":"Se convocan financiación de proyectos de movilidad eléctrica en flotas empresariales dirigidas a pymes con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 28/04/2026","importe_maximo":"","sectores":["Servicios Profesionales"],"tipo_beneficiario":["Startups","Empresas emergentes"],"relevancia":0.37,"fecha_scraping":"2026-03-08T21:50:38.705717"},{"id":"demo000008","titulo":"Programa de ayudas a la transformación digital del comercio minorista","organismo":"Red.es – Entidad Pública Empresarial","boletin":"DOGV","comunidad":"Comunitat Valenciana","fecha_publicacion":"2025-12-11","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10008","descripcion":"Se convocan programa de ayudas a la transformación digital del comercio minorista dirigidas a autónomos con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 01/04/2026","importe_maximo":"hasta 500.000 €","sectores":["Construcción","Inmobiliario"],"tipo_beneficiario":["Autónomos"],"relevancia":0.47,"fecha_scraping":"2026-03-08T21:50:38.704104"},{"id":"demo000003","titulo":"Convocatoria de ayudas para proyectos de I+D+i en empresas industriales","organismo":"CDTI – Centro para el Desarrollo Tecnológico Industrial","boletin":"BOPV","comunidad":"País Vasco","fecha_publicacion":"2025-12-09","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10003","descripcion":"Se convocan convocatoria de ayudas para proyectos de i+d+i en empresas industriales dirigidas a microempresas con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 05/05/2026","importe_maximo":"hasta 2.000.000 €","sectores":["Comercio","Retail"],"tipo_beneficiario":["Grandes empresas","Pymes"],"relevancia":0.97,"fecha_scraping":"2026-03-08T21:50:38.703911"},{"id":"demo000062","titulo":"Ayudas para planes de igualdad y conciliación en empresas","organismo":"CDTI – Centro para el Desarrollo Tecnológico Industrial","boletin":"DOGC","comunidad":"Cataluña","fecha_publicacion":"2025-12-08","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10062","descripcion":"Se convocan ayudas para planes de igualdad y conciliación en empresas dirigidas a grandes empresas con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 31/03/2026","importe_maximo":"3.000 – 25.000 €","sectores":["Salud","Biotecnología"],"tipo_beneficiario":["Startups","Empresas emergentes"],"relevancia":0.68,"fecha_scraping":"2026-03-08T21:50:38.706016"},{"id":"demo000075","titulo":"Incentivos a la investigación colaborativa empresa-universidad","organismo":"IVACE – Institut Valencià de Competitivitat Empresarial","boletin":"BOJA","comunidad":"Andalucía","fecha_publicacion":"2025-12-08","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10075","descripcion":"Se convocan incentivos a la investigación colaborativa empresa-universidad dirigidas a grandes empresas con domicilio fiscal en España. La solicitud deberá realizarse a través de la sede electrónica del organismo convocante.","plazo_solicitud":"Hasta el 17/05/2026","importe_maximo":"hasta 500.000 €","sectores":["Construcción","Inmobiliario"],"tipo_beneficiario":["Autónomos"],"relevancia":0.49,"fecha_scraping":"2026-03-08T21:50:38.706513"}];
+
+// ── CONFIG ────────────────────────────────────────────────────────────────────
+const BOLETIN_COLORS = {
+  BOE:'#3b82f6', BDNS:'#8b5cf6', BOJA:'#f59e0b',
+  DOGC:'#ef4444', BOCM:'#ec4899', DOGV:'#06b6d4', BOPV:'#10b981'
+};
+const BOLETIN_URLS = {
+  BOE:'https://www.boe.es',
+  BDNS:'https://www.infosubvenciones.es',
+  BOJA:'https://www.juntadeandalucia.es/boja',
+  DOGC:'https://portaldogc.gencat.cat',
+  BOCM:'https://www.bocm.es',
+  DOGV:'https://www.dogv.gva.es',
+  BOPV:'https://www.euskadi.eus/bopv2',
+};
+
+let selectedId = null;
+let filtered = [];
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+document.getElementById('current-date').textContent = new Date().toLocaleDateString('es-ES',{weekday:'short',year:'numeric',month:'short',day:'numeric'});
+
+function init() {
+  updateStats();
+  renderBoletines();
+  renderCharts();
+  applyFilters();
+  
+  document.getElementById('search-input').addEventListener('input', debounce(applyFilters,200));
+  document.getElementById('filter-boletin').addEventListener('change', applyFilters);
+  document.getElementById('filter-comunidad').addEventListener('change', applyFilters);
+  document.getElementById('filter-relevancia').addEventListener('change', applyFilters);
+}
+
+function debounce(fn, ms) {
+  let t; return (...a) => { clearTimeout(t); t = setTimeout(()=>fn(...a), ms); };
+}
+
+// ── STATS ─────────────────────────────────────────────────────────────────────
+function updateStats() {
+  document.getElementById('stat-total').textContent = RAW_DATA.length;
+  const high = RAW_DATA.filter(c => c.relevancia >= 0.5).length;
+  document.getElementById('stat-open').textContent = high;
+  const dates = RAW_DATA.map(c => c.fecha_scraping).sort().reverse();
+  if (dates[0]) {
+    const d = new Date(dates[0]);
+    document.getElementById('stat-updated').textContent = d.toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit'});
+  }
+}
+
+// ── FILTERS ───────────────────────────────────────────────────────────────────
+function applyFilters() {
+  const q = document.getElementById('search-input').value.toLowerCase().trim();
+  const bl = document.getElementById('filter-boletin').value;
+  const cc = document.getElementById('filter-comunidad').value;
+  const rel = parseFloat(document.getElementById('filter-relevancia').value) || 0;
+
+  filtered = RAW_DATA.filter(c => {
+    if (bl && c.boletin !== bl) return false;
+    if (cc && c.comunidad !== cc) return false;
+    if (c.relevancia < rel) return false;
+    if (q) {
+      const hay = `${c.titulo} ${c.organismo} ${c.descripcion}`.toLowerCase();
+      if (!q.split(' ').every(w => hay.includes(w))) return false;
+    }
+    return true;
+  });
+
+  filtered.sort((a,b) => b.fecha_publicacion.localeCompare(a.fecha_publicacion) || b.relevancia - a.relevancia);
+  document.getElementById('list-count').textContent = filtered.length;
+  renderList();
+}
+
+// ── LIST ──────────────────────────────────────────────────────────────────────
+function renderList() {
+  const container = document.getElementById('conv-list');
+  if (!filtered.length) {
+    container.innerHTML = '<div class="empty-list">No se encontraron convocatorias con esos filtros</div>';
+    return;
+  }
+  container.innerHTML = filtered.map(c => `
+    <div class="conv-item${selectedId===c.id?' selected':''}" onclick="selectConv('${c.id}')">
+      <div class="conv-top">
+        <div class="conv-title">${escHtml(c.titulo)}</div>
+        <span class="tag tag-${c.boletin.toLowerCase()}">${c.boletin}</span>
+      </div>
+      <div class="conv-meta">
+        <span class="conv-date">${c.fecha_publicacion}</span>
+        <span class="conv-org" title="${escHtml(c.organismo)}">${escHtml(c.organismo)}</span>
+        ${c.importe_maximo?`<span class="conv-importe">${escHtml(c.importe_maximo)}</span>`:''}
+      </div>
+      <div class="relevance" style="margin-top:6px">
+        <div class="rel-bar"><div class="rel-fill" style="width:${Math.round(c.relevancia*100)}%"></div></div>
+        <span class="rel-label">${Math.round(c.relevancia*100)}%</span>
+        ${c.comunidad?`<span style="font-size:10px;color:var(--muted);margin-left:auto">${c.comunidad}</span>`:''}
+      </div>
+    </div>
+  `).join('');
+}
+
+// ── DETAIL ────────────────────────────────────────────────────────────────────
+function selectConv(id) {
+  selectedId = id;
+  renderList();
+  const c = RAW_DATA.find(x => x.id === id);
+  if (!c) return;
+
+  const color = BOLETIN_COLORS[c.boletin] || '#64748b';
+  const sectores = (c.sectores||[]).join(', ') || '—';
+  const beneficiarios = (c.tipo_beneficiario||[]).join(', ') || '—';
+
+  document.getElementById('detail-panel').innerHTML = `
+    <div class="detail-boletin-banner" style="background:${color}18;border-bottom:1px solid ${color}33;color:${color}">
+      <span>${c.boletin} · ${c.comunidad}</span>
+      <span>${c.fecha_publicacion}</span>
+    </div>
+    <div class="detail-body">
+      <div class="detail-title">${escHtml(c.titulo)}</div>
+      <div class="detail-organismo">🏛️ ${escHtml(c.organismo)}</div>
+      
+      <div class="detail-grid">
+        <div class="detail-field">
+          <div class="detail-field-label">Plazo solicitud</div>
+          <div class="detail-field-value" style="color:var(--warn)">${escHtml(c.plazo_solicitud)||'—'}</div>
+        </div>
+        <div class="detail-field">
+          <div class="detail-field-label">Importe máximo</div>
+          <div class="detail-field-value" style="color:var(--accent3)">${escHtml(c.importe_maximo)||'—'}</div>
+        </div>
+        <div class="detail-field">
+          <div class="detail-field-label">Sectores</div>
+          <div class="detail-field-value">${escHtml(sectores)}</div>
+        </div>
+        <div class="detail-field">
+          <div class="detail-field-label">Beneficiarios</div>
+          <div class="detail-field-value">${escHtml(beneficiarios)}</div>
+        </div>
+      </div>
+
+      ${c.descripcion?`<div class="detail-desc">${escHtml(c.descripcion)}</div>`:''}
+
+      <div style="margin-bottom:12px">
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;font-family:'IBM Plex Mono',monospace;margin-bottom:6px">Relevancia empresarial</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="flex:1;height:6px;background:var(--border);border-radius:3px">
+            <div style="width:${Math.round(c.relevancia*100)}%;height:100%;border-radius:3px;background:linear-gradient(90deg,var(--accent3),var(--accent))"></div>
+          </div>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--accent)">${Math.round(c.relevancia*100)}%</span>
+        </div>
+      </div>
+
+      <a href="${c.url}" target="_blank" class="btn-primary">
+        Ver en ${c.boletin} →
+      </a>
+    </div>
+  `;
+}
+
+// ── BOLETINES ─────────────────────────────────────────────────────────────────
+function renderBoletines() {
+  const counts = {};
+  RAW_DATA.forEach(c => { counts[c.boletin] = (counts[c.boletin]||0)+1; });
+  const boletines = ['BOE','BDNS','BOJA','DOGC','BOCM','DOGV','BOPV'];
+  document.getElementById('boletines-list').innerHTML = boletines.map(b => `
+    <div class="boletin-row">
+      <div class="boletin-name">
+        <div class="boletin-dot" style="background:${BOLETIN_COLORS[b]}"></div>
+        <a href="${BOLETIN_URLS[b]}" target="_blank" style="color:inherit;text-decoration:none">${b}</a>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="boletin-count">${counts[b]||0}</span>
+        <span class="boletin-status">● activo</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ── CHARTS ────────────────────────────────────────────────────────────────────
+function renderCharts() {
+  Chart.defaults.color = '#64748b';
+  Chart.defaults.borderColor = '#1f2d45';
+  const gridColor = '#1a2336';
+
+  // By boletin
+  const byBoletin = {};
+  RAW_DATA.forEach(c => { byBoletin[c.boletin]=(byBoletin[c.boletin]||0)+1; });
+  new Chart(document.getElementById('chart-boletin'), {
+    type:'doughnut',
+    data:{
+      labels:Object.keys(byBoletin),
+      datasets:[{
+        data:Object.values(byBoletin),
+        backgroundColor:Object.keys(byBoletin).map(b=>BOLETIN_COLORS[b]+'cc'),
+        borderColor:Object.keys(byBoletin).map(b=>BOLETIN_COLORS[b]),
+        borderWidth:1,
+      }]
+    },
+    options:{
+      plugins:{legend:{position:'right',labels:{boxWidth:10,padding:8,font:{size:11}}}},
+      cutout:'65%'
+    }
+  });
+
+  // By comunidad
+  const byCom = {};
+  RAW_DATA.forEach(c => { byCom[c.comunidad]=(byCom[c.comunidad]||0)+1; });
+  const comColors = ['#3b82f6','#8b5cf6','#f59e0b','#ef4444','#ec4899','#06b6d4','#10b981'];
+  new Chart(document.getElementById('chart-comunidad'), {
+    type:'bar',
+    data:{
+      labels:Object.keys(byCom),
+      datasets:[{
+        label:'Convocatorias',
+        data:Object.values(byCom),
+        backgroundColor:comColors.map(c=>c+'99'),
+        borderColor:comColors,
+        borderWidth:1,borderRadius:4,
+      }]
+    },
+    options:{
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{grid:{color:gridColor},ticks:{font:{size:9},maxRotation:40}},
+        y:{grid:{color:gridColor},beginAtZero:true,ticks:{font:{size:11}}}
+      }
+    }
+  });
+
+  // By month
+  const byMonth = {};
+  RAW_DATA.forEach(c => {
+    const m = c.fecha_publicacion.substring(0,7);
+    byMonth[m]=(byMonth[m]||0)+1;
+  });
+  const sortedMonths = Object.keys(byMonth).sort();
+  new Chart(document.getElementById('chart-meses'), {
+    type:'line',
+    data:{
+      labels:sortedMonths,
+      datasets:[{
+        label:'Convocatorias',
+        data:sortedMonths.map(m=>byMonth[m]),
+        borderColor:'#00e5ff',
+        backgroundColor:'rgba(0,229,255,0.08)',
+        borderWidth:2,fill:true,tension:.4,
+        pointBackgroundColor:'#00e5ff',pointRadius:4,
+      }]
+    },
+    options:{
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{grid:{color:gridColor},ticks:{font:{size:11}}},
+        y:{grid:{color:gridColor},beginAtZero:true,ticks:{font:{size:11}}}
+      }
+    }
+  });
+}
+
+// ── UTIL ──────────────────────────────────────────────────────────────────────
+function escHtml(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+init();
+</script>
+</body>
+</html>

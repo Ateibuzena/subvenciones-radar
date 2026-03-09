@@ -1,0 +1,31 @@
+2026-03-09 19:12:24,113 [INFO] scripts.monitor - Iniciando scraper BOE...
+2026-03-09 19:12:24,114 [INFO] root - BOE: consultando sumario 20260309
+2026-03-09 19:12:24,114 [INFO] scripts.monitor - Iniciando scraper BDNS...
+2026-03-09 19:12:24,114 [INFO] scripts.monitor - Iniciando scraper BOJA...
+2026-03-09 19:12:24,114 [INFO] scripts.monitor - Iniciando scraper DOGC...
+2026-03-09 19:12:24,115 [INFO] root - BDNS: consultando convocatorias
+2026-03-09 19:12:24,115 [INFO] root - BOJA: consultando RSS https://www.juntadeandalucia.es/boja/rss/rss.xml
+2026-03-09 19:12:24,115 [INFO] root - DOGC: consultando RSS https://portaldogc.gencat.cat/utilsEADOP/PDF/RSS/RSS_DOGC_RSSCA.xml
+2026-03-09 19:12:24,164 [WARNING] subvenciones - URLError (1/3) en https://portaldogc.gencat.cat/utilsEADOP/PDF/RSS/RSS_DOGC_RSSCA.xml: [SSL: SSLV3_ALERT_HANDSHAKE_FAILURE] sslv3 alert handshake failure (_ssl.c:1007)
+2026-03-09 19:12:24,182 [ERROR] root - BDNS: JSON inválido
+2026-03-09 19:12:24,240 [WARNING] subvenciones - HTTPError 404 en https://www.juntadeandalucia.es/boja/rss/rss.xml
+2026-03-09 19:12:24,242 [WARNING] root - BOJA: sin respuesta del RSS
+2026-03-09 19:12:24,264 [ERROR] root - BOE: JSON inválido para 20260309: Expecting value: line 1 column 1 (char 0)
+2026-03-09 19:12:25,184 [INFO] scripts.monitor - Iniciando scraper BOCM...
+2026-03-09 19:12:25,184 [INFO] root - BOCM: consultando RSS https://www.bocm.es/rss/bocm_rss.xml
+2026-03-09 19:12:25,206 [WARNING] subvenciones - URLError (2/3) en https://portaldogc.gencat.cat/utilsEADOP/PDF/RSS/RSS_DOGC_RSSCA.xml: [SSL: SSLV3_ALERT_HANDSHAKE_FAILURE] sslv3 alert handshake failure (_ssl.c:1007)
+2026-03-09 19:12:25,243 [INFO] scripts.monitor - Iniciando scraper DOGV...
+2026-03-09 19:12:25,243 [INFO] root - DOGV: consultando RSS https://www.dogv.gva.es/portal/rss/es/rss.xml
+2026-03-09 19:12:25,264 [INFO] scripts.monitor - Iniciando scraper BOPV...
+2026-03-09 19:12:25,264 [INFO] root - BOPV: consultando RSS https://www.euskadi.eus/bopv2/datos/rss/bopv_es.xml
+2026-03-09 19:12:25,278 [WARNING] subvenciones - URLError (1/3) en https://www.dogv.gva.es/portal/rss/es/rss.xml: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1007)
+2026-03-09 19:12:25,441 [WARNING] subvenciones - HTTPError 404 en https://www.bocm.es/rss/bocm_rss.xml
+2026-03-09 19:12:25,442 [WARNING] root - BOCM: sin respuesta del RSS
+2026-03-09 19:12:25,462 [WARNING] subvenciones - HTTPError 404 en https://www.euskadi.eus/bopv2/datos/rss/bopv_es.xml
+2026-03-09 19:12:25,463 [WARNING] root - BOPV: sin respuesta del RSS
+2026-03-09 19:12:26,320 [WARNING] subvenciones - URLError (2/3) en https://www.dogv.gva.es/portal/rss/es/rss.xml: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1007)
+2026-03-09 19:12:27,257 [WARNING] subvenciones - URLError (3/3) en https://portaldogc.gencat.cat/utilsEADOP/PDF/RSS/RSS_DOGC_RSSCA.xml: [SSL: SSLV3_ALERT_HANDSHAKE_FAILURE] sslv3 alert handshake failure (_ssl.c:1007)
+2026-03-09 19:12:28,361 [WARNING] subvenciones - URLError (3/3) en https://www.dogv.gva.es/portal/rss/es/rss.xml: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1007)
+2026-03-09 19:12:31,262 [WARNING] root - DOGC: sin respuesta del RSS
+2026-03-09 19:12:32,366 [WARNING] root - DOGV: sin respuesta del RSS
+2026-03-09 19:12:33,375 [INFO] scripts.monitor - Ejecución completada: 0 nuevas, 0 en DB total
